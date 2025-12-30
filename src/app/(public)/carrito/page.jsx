@@ -178,7 +178,7 @@ export default function Carrito() {
                                             nombre={"Eliminar"}/></span>
                                     </TableCell>
                                     <TableCell className="px-4 py-4 text-sm text-gray-800 align-middle border-b"><img
-                                        src={producto.imagenProducto} alt={"Imagen Producto"} width={100}
+                                        src={`https://imagedelivery.net/aCBUhLfqUcxA2yhIBn1fNQ/${producto.imagenProducto}/mini`} alt={"Imagen Producto"} width={100}
                                         height={100} className="object-cover rounded"/></TableCell>
                                     <TableCell
                                         className="px-4 py-4 text-sm text-gray-800 align-middle border-b">{producto.cantidadVendida}</TableCell>

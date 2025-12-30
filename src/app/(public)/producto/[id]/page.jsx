@@ -6,6 +6,9 @@ import {useCarritoGlobal} from "@/ContextosGlobales/CarritoContext";
 import {toast} from "react-hot-toast";
 import Link from "next/link";
 import {useRouter} from "next/navigation";
+import CarruselProducto from "@/Componentes/CarruselProducto";
+
+
 
 
 export default function ProductoDetalle() {
@@ -15,8 +18,9 @@ export default function ProductoDetalle() {
     const [carrito, setCarrito] = useCarritoGlobal();
     const router = useRouter();
 
+
     function agregarAlCarrito(productoSeleccionado) {
-       setCarrito(arrayProductosPrevios => [...arrayProductosPrevios, productoSeleccionado])
+        setCarrito(arrayProductosPrevios => [...arrayProductosPrevios, productoSeleccionado])
         toast.success("Producto añadido al carrito de compras!")
     }
 
@@ -47,6 +51,8 @@ export default function ProductoDetalle() {
 
     // CONSTANTE API QUE APUNTA AL SERVIDOR BACKEND PARA CONECTAR CON LOS ENDPOINDS EN VIEWS
     const API = process.env.NEXT_PUBLIC_API_URL;
+    const CLOUDFLARE_HASH = process.env.NEXT_PUBLIC_CLOUDFLARE_HASH;
+    const VARIANT = 'full'
 
 
 
@@ -69,9 +75,9 @@ export default function ProductoDetalle() {
         }
     }
 
-useEffect(() => {
-    seleccionarProductoPorID(id_producto);
-}, [id_producto]);
+    useEffect(() => {
+        seleccionarProductoPorID(id_producto);
+    }, [id_producto]);
 
 
 
@@ -83,169 +89,158 @@ useEffect(() => {
         booleanSinStock = true;
     }
 
+
+
+
+
+
     return (
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 mt-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-          <div className="flex items-start justify-center bg-white/70 backdrop-blur rounded-2xl p-4 shadow-sm ring-1 ring-slate-200 relative">
-            {producto && (
-<Carrusel
-    key={producto.id_producto}
-    imagen1={producto.imagenProducto}
-    imagen2={producto.imagenProductoSegunda ?? producto.imagenProducto}
-    imagen3={producto.imagenProductoTercera ?? producto.imagenProducto}
-    imagen4={producto.imagenProductoCuarta ?? producto.imagenProducto}
-></Carrusel>
-            )}
-          </div>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 mt-20">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div className="flex items-start justify-center bg-white/70 backdrop-blur rounded-2xl p-4   relative">
 
-          <div className="space-y-6">
-            {producto && (
-              <>
-                {/* TÍTULO DEL PRODUCTO */}
-                <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">
-                  {producto.tituloProducto}
-                </h1>
 
-         <div className="flex ">
-             <label className="font-bold">Cantidad en Stock:</label>
-             <p className="ml-2  font-bold">{producto.cantidadStock}</p>
-         </div>
+                    <CarruselProducto
+                        imagen1={`https://imagedelivery.net/${CLOUDFLARE_HASH}/${producto.imagenProducto}/${VARIANT}`}
+                        imagen2={`https://imagedelivery.net/${CLOUDFLARE_HASH}/${producto.imagenProductoSegunda}/${VARIANT}`}
+                        imagen3={`https://imagedelivery.net/${CLOUDFLARE_HASH}/${producto.imagenProductoTercera}/${VARIANT}`}
+                        imagen4={`https://imagedelivery.net/${CLOUDFLARE_HASH}/${producto.imagenProductoCuarta}/${VARIANT}`}
 
-                {/* PRECIO */}
-                <div className="flex items-baseline gap-3">
-                  <span className="text-sm uppercase tracking-wider text-slate-500">Valor</span>
-                  <label className="text-2xl md:text-3xl font-bold text-blue-600">
-                   $ {producto.valorProducto}
-                  </label>
+                    />
+
+
                 </div>
 
-      {/* DESCRIPCIÓN */}
-            <p className="text-slate-600 leading-relaxed whitespace-pre-line break-words">
-              {producto.descripcionProducto}
-            </p>
+                <div className="space-y-6">
+
+                    {producto && (
+                        <>
+                            {/* TÍTULO DEL PRODUCTO */}
+                            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">
+                                {producto.tituloProducto}
+                            </h1>
+
+                            <div className="flex ">
+                                <label className="font-bold">Cantidad en Stock:</label>
+                                <p className="ml-2  font-bold">{producto.cantidadStock}</p>
+                            </div>
+
+                            {/* PRECIO */}
+                            <div className="flex items-baseline gap-3">
+                                <span className="text-sm uppercase tracking-wider text-slate-500">Valor</span>
+                                <label className="text-2xl md:text-3xl font-bold text-blue-600">
+                                    $ {producto.valorProducto}
+                                </label>
+                            </div>
+
+                            {/* DESCRIPCIÓN */}
+                            <p className="text-slate-600 leading-relaxed whitespace-pre-line break-words">
+                                {producto.descripcionProducto}
+                            </p>
 
 
-                {/* SEPARADOR SUTIL */}
-                <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+                            {/* SEPARADOR SUTIL */}
+                            <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
 
 
 
-                {/* ACCIONES */}
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                            {/* ACCIONES */}
+                            <div className="flex flex-col sm:flex-row gap-3 pt-2">
 
 
 
-                <button
-                    type="button"
-                    disabled={booleanSinStock}
-                    onClick={() => agregarAlCarrito(producto)}
-                    className="
+                                <button
+                                    type="button"
+                                    disabled={booleanSinStock}
+                                    onClick={() => agregarAlCarrito(producto)}
+                                    className="
     inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold text-white
     bg-blue-600 hover:bg-blue-700 active:bg-blue-800
     shadow-lg shadow-blue-600/20 ring-1 ring-emerald-700/20 transition
     disabled:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-500 disabled:active:bg-gray-500
 "
-                  >
-                    Añadir Unidad al carrito
-                  </button>
+                                >
+                                    Añadir Unidad al carrito
+                                </button>
 
 
-                        <button
-                            onClick={() => comparAhora(producto)}
+                                <button
+                                    onClick={() => comparAhora(producto)}
 
-                            type="button"
-                            className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-950 active:bg-black shadow-lg shadow-slate-900/20 ring-1 ring-black/10 transition"
-                        >
-                            Comprar
-                        </button>
+                                    type="button"
+                                    className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-950 active:bg-black shadow-lg shadow-slate-900/20 ring-1 ring-black/10 transition"
+                                >
+                                    Comprar
+                                </button>
 
 
+                            </div>
+
+
+
+
+                            {/* BENEFICIOS / SELLOS DE CONFIANZA */}
+                            <div className="mt-6 rounded-2xl border border-sky-200 bg-white text-slate-900 px-5 py-4 shadow-sm">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-sky-600 mb-4">
+                                    Compra segura con Mercado Pago
+                                </p>
+
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                    {/* Pago seguro */}
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-500/10 ring-1 ring-sky-500/40 text-lg">
+                                            🔒
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-semibold">Pago 100% seguro</p>
+                                            <p className="text-xs text-slate-500">
+                                                Tus datos viajan cifrados y nunca se comparten con terceros.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Medios de pago */}
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-400/10 ring-1 ring-sky-400/40 text-lg">
+                                            💳
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p className="text-sm font-semibold">Medios de pago flexibles</p>
+                                            <p className="text-xs text-slate-500">
+                                                Tarjetas de crédito, débito y transferencias bancarias.
+                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <img
+                                                    src="/MP_RGB_HANDSHAKE_color_horizontal.svg"
+                                                    alt="Mercado Pago"
+                                                    className="h-6 w-auto object-contain"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Soporte */}
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-300/10 ring-1 ring-sky-300/40 text-lg">
+                                            🤝
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-semibold">Soporte dedicado</p>
+                                            <p className="text-xs text-slate-500">
+                                                Acompañamos tu compra ante cualquier duda o problema.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
 
 
 
-                  {/* SELLOS DE CONFIANZA */}
-                  <div className="mt-6 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-md">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500 mb-5">
-                          Compra protegida y segura
-                      </p>
-
-
-                      {/*PANTALLAS DE CELULARES SELLOS DE CONFIANZA*/}
-
-                      <div className="block md:hidden" >
-                          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 -mt-25">
-
-                              {/* Seguridad */}
-                              <div className="space-y-2 mt-25">
-                                  <p className="text-sm font-semibold text-slate-900">
-                                      Pago seguro garantizado
-                                  </p>
-                                  <li className="text-xs text-slate-500 leading-relaxed ml-8">Pago inmediato</li>
-                                  <li className="text-xs text-slate-500 leading-relaxed ml-8">Crédito, débito, cuotas y saldo Mercado Pago</li>
-                                  <li className="text-xs text-slate-500 leading-relaxed ml-8">Seguridad garantizada</li>
-                                  <li className="text-xs text-slate-500 leading-relaxed ml-8">Comprobante automático</li>
-
-
-                              </div>
-
-
-
-                              {/* Atención */}
-                              <div >
-                                  <img
-                                      src="/Mercado_Pago.png"
-                                      alt="Mercado Pago"
-                                      className="h-50 w-auto object-contain -mt-10"
-                                  />
-                              </div>
-
-                          </div>
-                      </div>
-
-
-
-
-
-                      {/*PANTALLAS DE ESCRITORIO SELLOS DE CONFIANZA*/}
-                      <div className="hidden md:block mt-10" >
-
-                          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 -mt-30">
-
-                              {/* Seguridad */}
-                              <div className="space-y-1 mt-25">
-                                  <p className="text-sm font-semibold text-slate-900">
-                                      Pago seguro garantizado
-                                  </p>
-                                  <li className="text-xs text-slate-500 leading-relaxed ml-8">Pago inmediato</li>
-                                  <li className="text-xs text-slate-500 leading-relaxed ml-8">Crédito, débito, cuotas y saldo Mercado Pago</li>
-                                  <li className="text-xs text-slate-500 leading-relaxed ml-8">Seguridad garantizada</li>
-                                  <li className="text-xs text-slate-500 leading-relaxed ml-8">Comprobante automático</li>
-
-
-                              </div>
-
-
-
-                              {/* Atención */}
-                              <div >
-                                  <img
-                                      src="/Mercado_Pago.png"
-                                      alt="Mercado Pago"
-                                      className="h-50 w-auto object-contain mt-30"
-                                  />
-                              </div>
-
-                          </div>
-                      </div>
-
-
-                  </div>
-              </>
-            )}
-          </div>
+            </div>
         </div>
-      </div>
     )
 
 }

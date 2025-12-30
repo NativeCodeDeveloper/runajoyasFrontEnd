@@ -1,20 +1,18 @@
 "use client";
 import { useState, useEffect } from "react";
-import Image from "next/image";
-import MediaCard from "@/Componentes/MediaCard";
-import MediaCardImage from "@/Componentes/MediaCardImage";
-import { toast, Toaster } from 'react-hot-toast';
 import {
     Table,
     TableBody,
     TableCaption,
     TableCell,
-    TableFooter,
     TableHead,
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
 import {ShadcnButton} from "@/Componentes/shadcnButton";
+import {toast} from "react-hot-toast";
+import ToasterClient from "@/Componentes/ToasterClient";
+import MediaCardImage from "@/Componentes/MediaCardImage";
 
 
 export default function Dashboard() {
@@ -46,7 +44,17 @@ export default function Dashboard() {
     const [preview4, setPreview4] = useState("");
 
 
+    //LLAMADA A HASH DE CLOUDFLARE
+    const CLOUDFLARE_HASH = process.env.NEXT_PUBLIC_CLOUDFLARE_HASH;
+    const VARIANT_CARD = 'card';
+    const VARIANT_FULL = 'full';
+    const VARIANT_MINI = 'mini';
 
+    // Utilidad para construir la URL de entrega de Cloudflare
+    function cfToSrc(imageId, variant = VARIANT_FULL) {
+        if (!imageId) return "";
+        return `https://imagedelivery.net/${CLOUDFLARE_HASH}/${imageId}/${variant}`;
+    }
 
 
 
@@ -119,7 +127,7 @@ export default function Dashboard() {
             obj = URL.createObjectURL(file);
             setPreview1(obj);
         } else {
-            setPreview1(imagenProducto || "");
+            setPreview1(cfToSrc(imagenProducto) || "");
         }
         return () => { if (obj) URL.revokeObjectURL(obj); };
     }, [file, imagenProducto]);
@@ -130,7 +138,7 @@ export default function Dashboard() {
             obj = URL.createObjectURL(file2);
             setPreview2(obj);
         } else {
-            setPreview2(imagenProductoSegunda || "");
+            setPreview2(cfToSrc(imagenProductoSegunda) || "");
         }
         return () => { if (obj) URL.revokeObjectURL(obj); };
     }, [file2, imagenProductoSegunda]);
@@ -141,7 +149,7 @@ export default function Dashboard() {
             obj = URL.createObjectURL(file3);
             setPreview3(obj);
         } else {
-            setPreview3(imagenProductoTercera || "");
+            setPreview3(cfToSrc(imagenProductoTercera) || "");
         }
         return () => { if (obj) URL.revokeObjectURL(obj); };
     }, [file3, imagenProductoTercera]);
@@ -152,15 +160,13 @@ export default function Dashboard() {
             obj = URL.createObjectURL(file4);
             setPreview4(obj);
         } else {
-            setPreview4(imagenProductoCuarta || "");
+            setPreview4(cfToSrc(imagenProductoCuarta) || "");
         }
         return () => { if (obj) URL.revokeObjectURL(obj); };
     }, [file4, imagenProductoCuarta]);
 
     // API INTERNA PARA HACER LOS FETH DIRECTO AL BACKEND NO USAR http://localhost:3001 PORQUE COMPLICA EL DESPLIEGUE EN LA NUBE
     const API = process.env.NEXT_PUBLIC_API_URL;
-    const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUD_NAME;
-    const UPLOAD_PRESET = process.env.NEXT_PUBLIC_UPLOAD_PRESET;
 
 
 
@@ -300,7 +306,7 @@ export default function Dashboard() {
     }
 
     // --- NUEVA FUNCION: handleActualizar ---
-    // Esta función sube sólo los archivos nuevos a Cloudinary y conserva las URLs existentes
+    // Esta función sube sólo los archivos nuevos a Cloudflare y conserva las URLs existentes
     async function handleActualizar() {
         if (!productoSeleccionado) {
             toast.error('No hay producto seleccionado para actualizar');
@@ -319,38 +325,34 @@ export default function Dashboard() {
             // Si hay archivos nuevos, subimos y reemplazamos
             if (file) {
                 try {
-                    finalImage1 = await uploadToCloudinary(file);
+                    finalImage1 = await uploadToCloudflare(file);
                     setimagenProducto(finalImage1);
                 } catch (err) {
                     console.error('Error subiendo imagen 1:', err);
                     toast.error('Error subiendo la imagen 1');
-                    // no retornamos aquí para intentar continuar con otras acciones mínimas
                 }
             }
-
             if (file2) {
                 try {
-                    finalImage2 = await uploadToCloudinary(file2);
+                    finalImage2 = await uploadToCloudflare(file2);
                     setImagenProductoSegunda(finalImage2);
                 } catch (err) {
                     console.error('Error subiendo imagen 2:', err);
                     toast.error('Error subiendo la imagen 2');
                 }
             }
-
             if (file3) {
                 try {
-                    finalImage3 = await uploadToCloudinary(file3);
+                    finalImage3 = await uploadToCloudflare(file3);
                     setImagenProductoTercera(finalImage3);
                 } catch (err) {
                     console.error('Error subiendo imagen 3:', err);
                     toast.error('Error subiendo la imagen 3');
                 }
             }
-
             if (file4) {
                 try {
-                    finalImage4 = await uploadToCloudinary(file4);
+                    finalImage4 = await uploadToCloudflare(file4);
                     setImagenProductoCuarta(finalImage4);
                 } catch (err) {
                     console.error('Error subiendo imagen 4:', err);
@@ -376,7 +378,7 @@ export default function Dashboard() {
 
         } catch (error) {
             console.error('Error en handleActualizar:', error);
-            toast.error('No fue posible actualizar las imágenes');
+            return toast.error('No fue posible actualizar las imágenes');
         } finally {
             setSubiendo(false);
         }
@@ -518,17 +520,34 @@ export default function Dashboard() {
     useEffect(() => {
         cargarProductos();
     }, []);
-    //FUNCION PARA CARGAR IMAGENES A CLOUDINARY
-    async function uploadToCloudinary(file) {
-        const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`;
-        const form = new FormData();
-        form.append("file", file);
-        form.append("upload_preset", UPLOAD_PRESET);
+//FUNCION PARA CARGAR IMAGENES A CLOUDFLARE (vía backend)
+// === AQUÍ SE LLAMA A LA API PARA SUBIR LA IMAGEN A CLOUDFLARE ===
+    async function uploadToCloudflare(file) {
+        if (!file) throw new Error("No file provided");
 
-        const res = await fetch(url, { method: "POST", body: form });
-        if (!res.ok) throw new Error("Error subiendo a Cloudinary");
-        const data = await res.json();
-        return data.secure_url; // 👈 URL final segura
+        const form = new FormData();
+        // el backend espera el campo 'image'
+        form.append("image", file);
+
+        const res = await fetch(`${API}/cloudflare/subirimagenes`, {
+            method: "POST",
+            body: form,
+        });
+
+        let data;
+        try {
+            data = await res.json();
+        } catch (e) {
+            throw new Error("El backend no devolvió JSON válido al subir la imagen");
+        }
+
+        // el backend devuelve { ok: true, imageId, deliveryUrl, ... }
+        if (!res.ok || !data?.ok || !data?.imageId) {
+            console.error("Cloudflare backend upload failed", data);
+            throw new Error(data?.error || data?.message || "Error subiendo a Cloudflare (backend)");
+        }
+
+        return data.imageId;
     }
 
     //FUNCION PARA INSERTAR NUEVOS PRODUCTOS ESPECIFICO POR ID
@@ -556,29 +575,64 @@ export default function Dashboard() {
 
             setSubiendo(true);
 
-            // Subidas a Cloudinary segun existan archivos
+            // Subidas a Cloudflare según existan archivos
             let finalImageUrl = imagenProducto;
-            if (file) {
-                finalImageUrl = await uploadToCloudinary(file);
-                setimagenProducto(finalImageUrl);
+            try {
+                if (file) {
+                    finalImageUrl = await uploadToCloudflare(file);
+                    setimagenProducto(finalImageUrl);
+                }
+            } catch (err) {
+                console.error('Error subiendo imagen principal a Cloudflare:', err);
+                toast.error('Error subiendo imagen principal: ' + (err?.message || err));
+                setSubiendo(false);
+                return;
             }
 
             let finalImageUrl2 = imagenProductoSegunda;
-            if (file2) {
-                finalImageUrl2 = await uploadToCloudinary(file2);
-                setImagenProductoSegunda(finalImageUrl2);
+            try {
+                if (file2) {
+                    finalImageUrl2 = await uploadToCloudflare(file2);
+                    setImagenProductoSegunda(finalImageUrl2);
+                }
+            } catch (err) {
+                console.error('Error subiendo imagen 2 a Cloudflare:', err);
+                toast.error('Error subiendo imagen 2: ' + (err?.message || err));
+                setSubiendo(false);
+                return;
             }
 
             let finalImageUrl3 = imagenProductoTercera;
-            if (file3) {
-                finalImageUrl3 = await uploadToCloudinary(file3);
-                setImagenProductoTercera(finalImageUrl3);
+            try {
+                if (file3) {
+                    finalImageUrl3 = await uploadToCloudflare(file3);
+                    setImagenProductoTercera(finalImageUrl3);
+                }
+            } catch (err) {
+                console.error('Error subiendo imagen 3 a Cloudflare:', err);
+                toast.error('Error subiendo imagen 3: ' + (err?.message || err));
+                setSubiendo(false);
+                return;
             }
 
             let finalImageUrl4 = imagenProductoCuarta;
-            if (file4) {
-                finalImageUrl4 = await uploadToCloudinary(file4);
-                setImagenProductoCuarta(finalImageUrl4);
+            try {
+                if (file4) {
+                    finalImageUrl4 = await uploadToCloudflare(file4);
+                    setImagenProductoCuarta(finalImageUrl4);
+                }
+            } catch (err) {
+                console.error('Error subiendo imagen 4 a Cloudflare:', err);
+                toast.error('Error subiendo imagen 4: ' + (err?.message || err));
+                setSubiendo(false);
+                return;
+            }
+
+            // Validar que la imagen principal no esté vacía
+            if (!finalImageUrl) {
+                toast.error('La imagen principal no se subió correctamente.');
+                setSubiendo(false);
+                return;
             }
 
             const valorNumero = Number(valorProducto);
@@ -594,16 +648,24 @@ export default function Dashboard() {
                 categoriaProducto: categoriaProducto
             };
 
-            const res = await fetch(`${API}/producto/insertarProducto`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data),
-            });
-
-            const out = await res.json();
+            let res, out;
+            try {
+                res = await fetch(`${API}/producto/insertarProducto`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data),
+                });
+                out = await res.json();
+            } catch (err) {
+                console.error('Error de red al insertar producto:', err);
+                toast.error('Error de red al insertar producto: ' + (err?.message || err));
+                setSubiendo(false);
+                return;
+            }
             if (!res.ok) {
-                console.error(out);
-                toast.error("Error al insertar producto");
+                console.error('Error backend al insertar producto:', out);
+                toast.error('Error backend: ' + (out?.error || out?.message || 'Error desconocido al insertar producto'));
+                setSubiendo(false);
                 return;
             }
 
@@ -621,17 +683,12 @@ export default function Dashboard() {
             setFile3(null);
             setFile4(null);
         } catch (err) {
-            console.error(err);
-            toast.error("Error al subir producto ❌");
+            console.error('Error inesperado al subir producto:', err);
+            toast.error("Error inesperado al subir producto: " + (err?.message || err));
         } finally {
             setSubiendo(false);
         }
     }
-
-
-    const listadoProductos = productos;
-
-
 
 
 
@@ -639,7 +696,7 @@ export default function Dashboard() {
     //INICIO DEL COMPONETE GRAFICO EN REACT
     return (
         <div>
-            <Toaster position="top-right" reverseOrder={false} />
+            <ToasterClient/>
             <h1 className="max-w-7xl mx-auto px-6 mt-10 text-3xl md:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-slate-800 via-slate-600 to-slate-800 bg-clip-text text-transparent">Gestión de Productos</h1>
             <div className="max-w-7xl mx-auto px-6 py-10">
 
@@ -874,10 +931,10 @@ export default function Dashboard() {
                         {productoSeleccionado ? (
                             <div className="flex flex-col gap-4 w-full mt-4 items-center">
                                 {[
-                                    productoSeleccionado.imagenProducto,
-                                    productoSeleccionado.imagenProductoSegunda,
-                                    productoSeleccionado.imagenProductoTercera,
-                                    productoSeleccionado.imagenProductoCuarta
+                                    cfToSrc(productoSeleccionado.imagenProducto, VARIANT_FULL),
+                                    cfToSrc(productoSeleccionado.imagenProductoSegunda, VARIANT_FULL),
+                                    cfToSrc(productoSeleccionado.imagenProductoTercera, VARIANT_FULL),
+                                    cfToSrc(productoSeleccionado.imagenProductoCuarta, VARIANT_FULL),
                                 ]
                                     .filter(Boolean)
                                     .map((src, idx) => (
@@ -895,121 +952,70 @@ export default function Dashboard() {
 
 
 
-                <div>
 
-                    <div className="w-full md:max-w-sm">
-                        <br/><br/>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">Filtrar por categoría</label>
-                        <div className="relative">
-                            <select
-                                className="w-full appearance-none rounded-xl border border-slate-300 bg-white px-3 py-2 pr-10 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 hover:border-blue-400"
-                                value={categoriaProductoSeleccion}
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    setcategoriaProductoSeleccion(value);
-                                    filtrarPorCategoria(value);
-                                }}
-                            >
-                                <option value="">-- Selecciona una categoría --</option>
-                                {listadoCategorias.map((categoria) => (
-                                    <option key={categoria.id_categoriaProducto} value={categoria.id_categoriaProducto}>
-                                        {categoria.descripcionCategoria}
-                                    </option>
-                                ))}
-                            </select>
-                            {/* Caret decorativo */}
-                            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-500">▾</span>
 
-                        </div>
-                        <br/><br/>
+                {/*FILTRO SELECCION DE PRODUCTOS POR CATEGORIA*/}
+                <div className="w-full md:max-w-sm">
+                    <br/><br/>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Filtrar por categoría</label>
+                    <div className="relative">
+                        <select
+                            className="w-full appearance-none rounded-xl border border-slate-300 bg-white px-3 py-2 pr-10 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 hover:border-blue-400"
+                            value={categoriaProductoSeleccion}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                setcategoriaProductoSeleccion(value);
+                                filtrarPorCategoria(value);
+                            }}
+                        >
+                            <option value="">-- Selecciona una categoría --</option>
+                            {listadoCategorias.map((categoria) => (
+                                <option key={categoria.id_categoriaProducto} value={categoria.id_categoriaProducto}>
+                                    {categoria.descripcionCategoria}
+                                </option>
+                            ))}
+                        </select>
+                        {/* Caret decorativo */}
+                        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-500">▾</span>
                     </div>
+                </div>
 
+                <br/>
 
-
-
-
-                    {/* FORMULARIO PARA ENCONTRAR POR SIMILITUD DE NOMBRE EN CONSULTA A LA BASE DE DATOS*/}
-                    <div className="w-full md:max-w-md ">
-                        <div className="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur p-4 md:p-5 shadow-sm">
-                            <label className="block text-sm font-semibold text-slate-700">Buscar por similitud en nombre</label>
-                            <p className="mt-1 text-xs text-slate-500">Encuentra productos con títulos parecidos. Escribe al menos 3 caracteres.</p>
-                            <div className="mt-3 relative flex w-full">
-                                {/* Icono decorativo */}
-                                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+                {/* FORMULARIO PARA ENCONTRAR POR SIMILITUD DE NOMBRE EN CONSULTA A LA BASE DE DATOS*/}
+                <div className="w-full md:max-w-md">
+                    <div className="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur p-4 md:p-5 shadow-sm">
+                        <label className="block text-sm font-semibold text-slate-700">Buscar por similitud en nombre</label>
+                        <p className="mt-1 text-xs text-slate-500">Encuentra productos con títulos parecidos. Escribe al menos 3 caracteres.</p>
+                        <div className="mt-3 relative flex w-full">
+                            {/* Icono decorativo */}
+                            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
                     <path fillRule="evenodd" d="M10.5 3.75a6.75 6.75 0 1 0 4.243 11.93l3.288 3.289a.75.75 0 1 0 1.06-1.06l-3.288-3.29A6.75 6.75 0 0 0 10.5 3.75Zm-5.25 6.75a5.25 5.25 0 1 1 10.5 0 5.25 5.25 0 0 1-10.5 0Z" clipRule="evenodd" />
                   </svg>
                 </span>
-                                <input
-                                    onChange={(e) => settituloSimilar(e.target.value)}
-                                    type="text"
-                                    placeholder="Ej: anillos plata, collares..."
-                                    className="w-full rounded-l-xl border border-slate-300 bg-white pl-9 pr-3 py-2 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/40 hover:border-blue-400"
-                                />
-                                <button
-                                    onClick={() => { buscarSimilar(tituloSimilar) }}
-                                    type="button"
-                                    className="inline-flex items-center justify-center whitespace-nowrap rounded-r-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40 active:scale-[.99]"
-                                    aria-label="Buscar productos por similitud"
-                                >
-                                    Buscar
-                                </button>
-                            </div>
+                            <input
+                                onChange={(e) => settituloSimilar(e.target.value)}
+                                type="text"
+                                placeholder="Ej: anillos plata, collares..."
+                                className="w-full rounded-l-xl border border-slate-300 bg-white pl-9 pr-3 py-2 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/40 hover:border-blue-400"
+                            />
+                            <button
+                                onClick={() => { buscarSimilar(tituloSimilar) }}
+                                type="button"
+                                className="inline-flex items-center justify-center whitespace-nowrap rounded-r-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40 active:scale-[.99]"
+                                aria-label="Buscar productos por similitud"
+                            >
+                                Buscar
+                            </button>
                         </div>
                     </div>
-
-                    <br/><br/>
-
-                    <ShadcnButton className="bg-purple-600" nombre={"Ver Todos"} funcion={()=> cargarProductos()}/>
                 </div>
 
 
 
 
-                {/*TABLA DE PRODUCTOS EN PANTALLAS DE CELULARES*/}
-
-                <div className=" block  md:hidden w-full mt-20 bg-gradient-to-br from-white to-sky-50 rounded-4xl bg-white shadow-xl ring-1 ring-gray-50 p-6">
-                    <Table>
-                        <TableCaption>Listado de Productos Ingresados</TableCaption>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="text-center bg-gradient-to-r bg-sky-100 uppercase font-bold tracking-wide">Titulo</TableHead>
-                                <TableHead className="text-center bg-gradient-to-r bg-sky-100 uppercase font-bold tracking-wide"> </TableHead>
-                                <TableHead className="text-center bg-gradient-to-r bg-sky-100 uppercase font-bold tracking-wide"> </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {listadoProductos.map((producto) => (
-                                <TableRow key={producto.id_producto}>
-
-
-                                    <TableCell className="text-start font-bold">{producto.tituloProducto}</TableCell>
-
-
-                                    <TableCell className="text-center">
-                                        <ShadcnButton className="bg-red-600" variant={"bg-red"} nombre={"Eliminar"} funcion={()=> eliminarProducto(producto.id_producto)}/>
-                                    </TableCell>
-
-
-                                    <TableCell className="text-center">
-                                        <ShadcnButton className="bg-green-600" nombre={"Seleccionar"} funcion={()=> cargarProductoEspecifico(producto.id_producto)} />
-                                    </TableCell>
-
-                                </TableRow>
-                            ))}
-                        </TableBody>
-
-                    </Table>
-                </div>
-
-
-
-
-
-
-
-                {/*TABLA DE PRODUCTOS EN ESCRITORIO DE COMPUTADORES*/}
-                <div className=" hidden md:block w-full mt-20 bg-gradient-to-br from-white to-sky-50 rounded-4xl bg-white shadow-xl ring-1 ring-gray-50 p-6">
+                <div className="w-full mt-20 bg-gradient-to-br from-white to-sky-50 rounded-4xl bg-white shadow-xl ring-1 ring-gray-50 p-6">
                     <Table>
                         <TableCaption>Listado de Productos Ingresados</TableCaption>
                         <TableHeader>
@@ -1022,10 +1028,10 @@ export default function Dashboard() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {listadoProductos.map((producto) => (
+                            {productos.map((producto) => (
                                 <TableRow key={producto.id_producto}>
                                     <TableCell className="text-center mx-auto">
-                                        <img className="mx-auto" src={producto.imagenProducto} alt={"Imagen"} width={100} height={100}/>
+                                        <img className="mx-auto" src={cfToSrc(producto.imagenProducto, VARIANT_MINI)} alt={"Imagen"} width={100} height={100}/>
                                     </TableCell>
 
                                     <TableCell className="text-center font-bold">{producto.tituloProducto}</TableCell>

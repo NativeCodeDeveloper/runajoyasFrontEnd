@@ -389,7 +389,7 @@ function CatalogoInner() {
                             .map(publicacion => (
                             <div key={publicacion.id_publicaciones} className="rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm hover:shadow-md transition">
                                 <img
-                                    src={publicacion.imagenPublicaciones_primera}
+                                    src={`https://imagedelivery.net/aCBUhLfqUcxA2yhIBn1fNQ/${publicacion.imagenPublicaciones_primera}/card`}
                                     className="w-full aspect-[3/4] object-cover"
                                     alt="Publicación"
                                 />
@@ -444,7 +444,7 @@ function CatalogoInner() {
                                        style={{ textDecoration: 'none', WebkitTextDecoration: 'none' }}
                                    >
                                        <MediaCardImage
-                                           imagenProducto={producto.imagenProducto}
+                                           imagenProducto={`https://imagedelivery.net/aCBUhLfqUcxA2yhIBn1fNQ/${producto.imagenProducto}/card`}
                                            className="no-underline hover:no-underline"
                                        />
                                    </Link>
